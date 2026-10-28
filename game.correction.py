@@ -94,6 +94,13 @@
                         print monstre inflige degats
                     else : 
                     le monstre {nom.monstre} est mort 
+
+# Fin de partie
+    #   afficher Game over et le nombre de vagues
+    #   enregistrer le score
+    #       ouvrir base
+    #       acceder a la collection score
+    #       insert_one {waves: vague}
             
                                         si les pv > 0 :
                                             return True

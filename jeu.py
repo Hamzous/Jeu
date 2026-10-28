@@ -202,4 +202,46 @@ def au_moins_un_hero_en_vie(equipe):
         if hero["estEnVie"] == True:
             return True
     return False
-            
+
+
+
+# JEU
+def jeu():
+    # Récupérer 3 noms valides (création de l'équipe)
+    # tant que au moins un hero est en vie 
+    # for heros in choix 
+    # for monstre in choix 
+    # le monstre attaque le premier héros en vie
+
+
+
+    heros_dispo = recuperer_heros()
+    afficher_heros_dispo(heros_dispo)
+    noms = recuperer_3_noms_valides(heros_dispo)
+    equipe = construire_equipe(noms, heros_dispo)
+    vague = 0
+    monstre = nouveau_monstre()
+    while au_moins_un_hero_en_vie(equipe):
+        afficher_stats_hero(equipe)
+        afficher_stats_monstre(monstre)
+        for hero in equipe:
+            if hero["estEnVie"] == True:
+                degats_hero = hero_attaque(hero, monstre)
+                print(hero["nom"], "inflige", degats_hero, "dégâts")
+                if monstre["estEnVie"] == False:
+                    print("Le monstre", monstre["nom"], "est mort")
+                    vague += 1
+                    monstres = nouveau_monstre()
+                    break
+            else:
+                print("Le héros", hero["nom"], "est mort")
+
+        for monstre in [monstres]:
+            if monstre["estEnVie"] == True:
+                for hero in equipe:
+                    if hero["estEnVie"] == True:
+                        degats_monstre = monstre_attaque(monstre, hero)
+                        print(monstre["nom"], "inflige", degats_monstre, "dégâts")
+                        break
+            else:
+                print("Le monstre", monstre["nom"], "est mort")
