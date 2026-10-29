@@ -14,6 +14,8 @@ MENU = [
     "Quitter",
 ]
 
+client = MongoClient("mongodb://localhost:27017/")
+
 # Menu
 #   Boucle sur tout element de MENU
 #       afficher numero element et texte element
@@ -44,10 +46,6 @@ def choix(options, erreur):
 def erreur():
     print("Erreur : saisie invalide")
 
-afficher_menu()
-choix(MENU , erreur)
-
-
 # Recuperer heros DB
 #       ouvrir base
 #       acceder a la collection heros
@@ -62,14 +60,13 @@ def recuperer_heros():
     liste = list(curseur)
     heros_dispo = liste
     return heros_dispo
-print(recuperer_heros())
 
 # Afficher heros dispo
 #       Boucle sur tout element de heros_dispo
 #           afficher nom, pv, attaque, defense
 def afficher_heros_dispo(heros_dispo):
     for hero in heros_dispo:
-        print(hero["nom"], "| PV :", hero["pv"], "| Attaque :", hero["attaque"], "| Défense :", hero["defense"])
+        print(hero["name"], "| PV :", hero["hp"], "| Attaque :", hero["attack"], "| Défense :", hero["defense"])
 
 
 # Récupérer 3 noms valides
@@ -90,7 +87,7 @@ def recuperer_3_noms_valides(heros_dispo):
         nom = input("Nom du héros : ").lower()
         existe = False
         for hero in heros_dispo:
-            if hero["nom"].lower() == nom:
+            if hero["name"].lower() == nom:
                 existe = True
         deja_dans_noms = nom in noms
         if existe and not deja_dans_noms:
@@ -112,7 +109,7 @@ def construire_equipe(noms , heros_dispo):
     equipe = []
     for nom in noms:
         for element in heros_dispo :
-            if element ["nom"] == nom :
+            if element ["name"].lower() == nom :
                 hero = element
         hero["estEnVie"] = True
         equipe.append(hero)
@@ -134,11 +131,9 @@ def nouveau_monstre():
     collection = db["monsters"]
     curseur = collection.find()
     liste = list(curseur)
-    print(liste)
     monstre = random.choice(liste)
     monstre["estEnVie"] = True
     return monstre
-print(nouveau_monstre())
 
 
 # estEnVie :
@@ -146,7 +141,7 @@ print(nouveau_monstre())
 #     sinon : return False
 
 def estEnVie( personnage): 
-    if personnage["PV"] > 0 :
+    if personnage["hp"] > 0 :
         return True
     else :
         return False
@@ -155,12 +150,12 @@ def estEnVie( personnage):
 
 def afficher_stats_hero (equipe):
     for hero in equipe :
-        print (hero["nom"] , " PV : ", hero["hp"], " Attaque : " , hero["attack"] , "defense : ", hero["defense"])
+        print (hero["name"] , " PV : ", hero["hp"], " Attaque : " , hero["attack"] , "defense : ", hero["defense"])
 
 # afficher_stats_monstre : afficher les stats monstre
 
 def afficher_stats_monstre (monstre) :
-        print (monstre["nom"] , " PV : ", monstre["hp"], " Attaque : " , monstre["attack"] , "defense : ", monstre["defense"])
+        print (monstre["name"] , " PV : ", monstre["hp"], " Attaque : " , monstre["attack"] , "defense : ", monstre["defense"])
 
 
 # hero_attaque
@@ -172,10 +167,9 @@ def afficher_stats_monstre (monstre) :
 
 def hero_attaque(hero, monstre):
     attaque_hero = hero["attack"]
-    pv_monstre = monstre["hp"]
     defense_monstre = monstre["defense"]
-    degats_hero = attaque_hero - defense_monstre
-    pv_monstre = pv_monstre - degats_hero
+    degats_hero = max(attaque_hero - defense_monstre, 0)  
+    monstre["hp"] = monstre["hp"] - degats_hero
     monstre["estEnVie"] = estEnVie(monstre)
     return degats_hero
 
@@ -189,11 +183,11 @@ def hero_attaque(hero, monstre):
 
 def monstre_attaque(monstre , hero) :
     attaque_monstre = monstre["attack"]
-    pv_hero = hero["hp"]
     defense_hero = hero["defense"]
-    degats_monstre = attaque_monstre - defense_hero
-    pv_hero = pv_hero - degats_monstre
-    hero["estEnVie"] = estEnVie(hero)
+    degats_monstre = max(attaque_monstre - defense_hero, 0)  
+    hero["hp"] = hero["hp"] - degats_monstre 
+    hero["estEnVie"] = estEnVie(hero)             
+
     return degats_monstre
 
 
@@ -224,24 +218,77 @@ def jeu():
     while au_moins_un_hero_en_vie(equipe):
         afficher_stats_hero(equipe)
         afficher_stats_monstre(monstre)
+
         for hero in equipe:
             if hero["estEnVie"] == True:
                 degats_hero = hero_attaque(hero, monstre)
-                print(hero["nom"], "inflige", degats_hero, "dégâts")
+                print(hero["name"], "inflige", degats_hero, "dégâts à" , hero["name"] )
                 if monstre["estEnVie"] == False:
-                    print("Le monstre", monstre["nom"], "est mort")
+                    print("Le monstre", monstre["name"], "est mort")
                     vague += 1
-                    monstres = nouveau_monstre()
+                    monstre = nouveau_monstre()
                     break
-            else:
-                print("Le héros", hero["nom"], "est mort")
 
-        for monstre in [monstres]:
-            if monstre["estEnVie"] == True:
-                for hero in equipe:
-                    if hero["estEnVie"] == True:
-                        degats_monstre = monstre_attaque(monstre, hero)
-                        print(monstre["nom"], "inflige", degats_monstre, "dégâts")
-                        break
-            else:
-                print("Le monstre", monstre["nom"], "est mort")
+        if monstre["estEnVie"] == True:
+            for hero in equipe:
+                if hero["estEnVie"] == True:
+                    degats_monstre = monstre_attaque(monstre, hero)
+                    print(monstre["name"], "inflige", degats_monstre, "dégâts")
+                    break
+        else:
+            print("Le monstre", monstre["name"], "est mort")
+
+
+# Fin de partie 
+# ajouter le score dans la db
+    print("Game over - vagues :", vague)
+    client = MongoClient("mongodb://localhost:27017/")
+    client["jeu"]["score"].insert_one({"waves": vague})
+
+
+# Afficher les scores
+#    Recuperer scores base
+#        ouvrir base
+#        acceder a collection score
+#        find
+#        convertir curseur en list
+#    filtrer les 3 meilleurs
+#         trie le tableau sur element.waves
+#         prendre 3 derniers elements
+#                array[-3:]
+#    Affiche les score
+
+def trier_par_vague(element):
+    return element["waves"]
+
+def afficher_scores():
+    client = MongoClient("mongodb://localhost:27017/")
+    db = client["jeu"]
+    collection = db["score"]
+    curseur = collection.find()
+    scores = list(curseur)
+
+    scores.sort(key=trier_par_vague)
+    meilleurs = scores[-3:]
+
+    for score in meilleurs:
+        print(score["waves"], "vagues")
+
+
+#Quitter 
+
+def quitter():
+    sys.exit()
+
+def main():
+    while True:
+        afficher_menu()
+        option = choix(MENU, erreur)
+        if option == 1:
+            jeu()
+        elif option == 2:
+            afficher_scores()
+        elif option == 3:
+            quitter()
+
+main()
